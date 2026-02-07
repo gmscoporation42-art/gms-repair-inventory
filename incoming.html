@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>G.M.S - Stock Incoming</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary-color: #198754; --bg-color: #f1f3f5; }
+        body { background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; height: 100vh; margin: 0; }
+
+        /* 🔐 Password Overlay */
+        #passwordOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(241, 243, 245, 0.98); 
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .login-card {
+            background: white; padding: 30px 20px; border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 320px; text-align: center;
+        }
+        
+        /* Password Box စာလုံးအသေးရိုက်လို့ရစေရန် */
+        #passInput { text-transform: none !important; border-radius: 10px; }
+
+        /* 📦 Main Content Layout */
+        #mainWrapper { display: none; flex-direction: column; height: 100vh; }
+        .navbar { background: white; border-bottom: 1px solid #dee2e6; padding: 0.5rem 1rem; }
+        .main-content { flex-grow: 1; display: flex; align-items: flex-start; justify-content: center; padding: 15px; overflow-y: auto; }
+        
+        /* Compact Form Card */
+        .card { width: 100%; max-width: 460px; border-radius: 15px; border: none; box-shadow: 0 5px 20px rgba(0,0,0,0.05); background: white; }
+        
+        .form-label { font-size: 0.7rem; font-weight: 700; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+        .form-control { border-radius: 6px; padding: 8px 12px; border: 1px solid #ced4da; text-transform: uppercase; font-size: 0.85rem; }
+        
+        /* 🚫 Quantity Box Arrows ဖျောက်ရန် */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        /* 🎨 Placeholder မှိန်ရန် နှင့် Quantity box ညှိရန် */
+        #in_qty::placeholder { color: #adb5bd; opacity: 0.6; font-weight: normal; font-size: 0.85rem; }
+        #in_qty { text-transform: none; font-size: 0.9rem; }
+
+        .switch-container { display: flex; gap: 8px; margin-top: 2px; }
+        .switch-label { padding: 6px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.7rem; font-weight: bold; cursor: pointer; background: #fff; color: #666; }
+        .switch-option input:checked + .switch-label { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        
+        .btn-save { background: var(--primary-color); color: white; font-weight: bold; border-radius: 10px; padding: 12px; border: none; margin-top: 5px; font-size: 0.9rem; }
+        footer { background: white; text-align: center; padding: 6px; font-size: 0.65rem; color: #999; border-top: 1px solid #dee2e6; }
+    </style>
+</head>
+<body>
+
+    <div id="passwordOverlay">
+        <div class="login-card">
+            <div class="text-success mb-3" style="font-size: 2.5rem;"><i class="bi bi-shield-lock"></i></div>
+            <h6 class="fw-bold mb-3">Packing Stock Access</h6>
+            <div class="position-relative mb-3">
+                <input type="password" id="passInput" class="form-control text-center" placeholder="Password">
+                <span onclick="togglePassView()" class="position-absolute end-0 top-50 translate-middle-y me-3" style="cursor:pointer; color:#888;">
+                    <i id="eyeIcon" class="bi bi-eye-slash"></i>
+                </span>
+            </div>
+            <button class="btn btn-success w-100 fw-bold" onclick="checkPass()">ENTER</button>
+            <div id="passError" class="text-danger small mt-2" style="display:none;">Incorrect Password</div>
+        </div>
+    </div>
+
+    <div id="mainWrapper">
+        <nav class="navbar">
+            <div class="container-fluid d-flex justify-content-between">
+                <button class="navbar-toggler p-1 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenu">
+                    <span class="navbar-toggler-icon" style="width: 20px; height: 20px;"></span>
+                </button>
+                <span class="fw-bold text-success" style="font-size: 0.8rem;">G.M.S STOCK INCOMING</span>
+                <div style="width: 30px;"></div>
+            </div>
+        </nav>
+
+        <div class="offcanvas offcanvas-start" id="mainMenu" style="width: 260px;">
+            <div class="offcanvas-header border-bottom py-2 bg-light">
+                <h6 class="fw-bold m-0 text-success">G.M.S MENU</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                <div class="list-group list-group-flush small">
+                    <a href="index.html" class="list-group-item list-group-item-action p-3">🏠 SPARE PARTS ENTRY</a>
+                    <a href="incoming.html" class="list-group-item list-group-item-action p-3 active text-white bg-success">📥 STOCK INCOMING</a>
+                    <a href="incoming_history.html" class="list-group-item list-group-item-action p-3">📋 INCOMING HISTORY</a>
+                    <button class="list-group-item list-group-item-action p-3 text-danger fw-bold border-top" onclick="logout()">🚪 LOGOUT</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card p-3">
+                <form id="incomingForm">
+                    <div class="mb-2">
+                        <label class="form-label">Incoming Date</label>
+                        <input type="date" id="in_date" class="form-control" required>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">Model Name</label>
+                            <input type="text" id="in_model" class="form-control" placeholder="MODEL" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Item Code</label>
+                            <input type="text" id="in_code" class="form-control" placeholder="CODE" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">Color</label>
+                            <input type="text" id="in_color" class="form-control" placeholder="BLACK" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Switch</label>
+                            <div class="switch-container">
+                                <label class="switch-option">
+                                    <input type="radio" name="sw_choice" value="BLUE" class="d-none" onclick="toggleRadio(this)">
+                                    <span class="switch-label">BLUE</span>
+                                </label>
+                                <label class="switch-option">
+                                    <input type="radio" name="sw_choice" value="RED" class="d-none" onclick="toggleRadio(this)">
+                                    <span class="switch-label">RED</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Incoming Qty</label>
+                        <input type="number" id="in_qty" class="form-control text-center fw-bold" placeholder="0" required>
+                    </div>
+
+                    <button type="submit" id="inBtn" class="btn btn-save w-100">
+                        <i class="bi bi-plus-circle me-1"></i> SAVE STOCK
+                    </button>
+                    <div id="inStatus" class="mt-2 text-center" style="font-size: 0.8rem;"></div>
+                </form>
+            </div>
+        </div>
+
+        <footer>© 2026 G.M.S CO.,LTD.</footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Password Logic
+        function togglePassView() {
+            const passInput = document.getElementById('passInput');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passInput.type === "password") {
+                passInput.type = "text";
+                eyeIcon.classList.replace('bi-eye-slash', 'bi-eye');
+            } else {
+                passInput.type = "password";
+                eyeIcon.classList.replace('bi-eye', 'bi-eye-slash');
+            }
+        }
+
+        function checkPass() {
+            const pass = document.getElementById('passInput').value;
+            if (pass === "gms123") {
+                document.getElementById('passwordOverlay').style.display = 'none';
+                document.getElementById('mainWrapper').style.display = 'flex';
+            } else {
+                document.getElementById('passError').style.display = 'block';
+                document.getElementById('passInput').value = '';
+                setTimeout(() => { document.getElementById('passError').style.display = 'none'; }, 2000);
+            }
+        }
+
+        document.getElementById('passInput').addEventListener("keypress", (e) => { if(e.key === "Enter") checkPass(); });
+
+        // Date Set
+        document.getElementById('in_date').value = new Date().toISOString().split('T')[0];
+
+        // Radio Toggle
+        let lastChecked = null;
+        function toggleRadio(radio) {
+            if (lastChecked === radio) { radio.checked = false; lastChecked = null; }
+            else { lastChecked = radio; }
+        }
+
+        // Supabase Fetch logic
+        document.getElementById('in_code').onblur = async function() {
+            const code = this.value.toUpperCase().trim();
+            if(!code) return;
+            const { data } = await _supabase.from('incoming_logs').select('*').eq('item_code', code).limit(1).single();
+            if (data) {
+                document.getElementById('in_model').value = data.model || "";
+                document.getElementById('in_color').value = data.color || "";
+                document.querySelectorAll('input[name="sw_choice"]').forEach(r => {
+                    r.checked = (data.switch && r.value === data.switch.toUpperCase());
+                    if(r.checked) lastChecked = r;
+                });
+            }
+        };
+
+        // Form Submit
+        document.getElementById('incomingForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('inBtn');
+            const status = document.getElementById('inStatus');
+            const selectedRadio = document.querySelector('input[name="sw_choice"]:checked');
+
+            btn.disabled = true;
+            btn.innerHTML = `SAVING...`;
+
+            const entry = {
+                created_at: document.getElementById('in_date').value,
+                item_code: document.getElementById('in_code').value.toUpperCase().trim(),
+                model: document.getElementById('in_model').value.toUpperCase().trim(),
+                color: document.getElementById('in_color').value.toUpperCase().trim(),
+                switch: selectedRadio ? selectedRadio.value : "",
+                incoming_qty: parseInt(document.getElementById('in_qty').value) || 0
+            };
+
+            const { error } = await _supabase.from('incoming_logs').insert([entry]);
+            if (error) {
+                status.innerHTML = `<span class="text-danger">❌ ${error.message}</span>`;
+            } else {
+                status.innerHTML = `<span class="text-success fw-bold">SAVED! ✅</span>`;
+                const d = document.getElementById('in_date').value;
+                e.target.reset();
+                document.getElementById('in_date').value = d;
+                lastChecked = null;
+                setTimeout(() => { status.innerHTML = ""; }, 2500);
+            }
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-plus-circle me-1"></i> SAVE STOCK`;
+        };
+
+        function logout() { window.location.href = "index.html"; }
+    </script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>G.M.S - Incoming History</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary-color: #198754; --bg-color: #f1f3f5; }
+        body, html { height: 100vh; margin: 0; display: flex; flex-direction: column; background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+
+        .navbar { background: white; border-bottom: 1px solid #dee2e6; flex-shrink: 0; padding: 0.5rem 1rem; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; padding: 10px; overflow: hidden; }
+        .dashboard-card { background: white; padding: 12px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Filter Panel */
+        .filter-panel { background: #fdfdfd; border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+        .filter-label { font-size: 0.8rem; font-weight: bold; color: #555; text-transform: uppercase; }
+
+        /* 📊 Table Styling (စာလုံးအကြီး/အထူ) */
+        .table-responsive { flex-grow: 1; overflow-y: auto; border-radius: 8px; border: 1px solid #dee2e6; }
+        
+        thead th { 
+            position: sticky; top: 0; z-index: 10; 
+            background-color: var(--primary-color) !important; color: white !important; 
+            font-size: 0.85rem; text-align: center; font-weight: 800;
+            border-right: 1px solid rgba(255,255,255,0.3) !important; 
+            padding: 10px 5px !important;
+        }
+
+        .table td { 
+            vertical-align: middle; text-align: center; 
+            font-size: 0.9rem; /* စာလုံးအရွယ်အစား */
+            font-weight: 700;  /* စာလုံးအထူ */
+            border-right: 1px solid #eee !important; border-bottom: 1px solid #eee !important;
+            padding: 10px 5px !important;
+        }
+
+        /* Form Controls */
+        .form-control-sm { border-radius: 6px; font-size: 0.9rem; font-weight: bold; }
+        .btn-update { background: var(--primary-color); color: white; font-weight: bold; border-radius: 10px; padding: 12px; border: none; width: 100%; margin-top: 5px; }
+        
+        footer { background: white; text-align: center; padding: 6px; font-size: 0.7rem; color: #888; border-top: 1px solid #dee2e6; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <button class="navbar-toggler p-1 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenu">
+                <span class="navbar-toggler-icon" style="width: 22px; height: 22px;"></span>
+            </button>
+            <span class="fw-bold text-success" style="font-size: 1rem;">INCOMING HISTORY</span>
+            <button class="btn btn-sm btn-success fw-bold px-2" onclick="exportToExcel()">
+                <i class="bi bi-file-earmark-excel me-1"></i> EXCEL
+            </button>
+        </div>
+    </nav>
+
+    <div class="offcanvas offcanvas-start" id="mainMenu" style="width: 260px;">
+        <div class="offcanvas-header border-bottom py-2 bg-light">
+            <h6 class="fw-bold m-0 text-success">G.M.S MENU</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="list-group list-group-flush small">
+                <a href="index.html" class="list-group-item list-group-item-action p-3 fw-bold">🏠 SPARE PARTS ENTRY</a>
+                <a href="incoming.html" class="list-group-item list-group-item-action p-3 fw-bold">📥 STOCK INCOMING</a>
+                <a href="incoming_history.html" class="list-group-item list-group-item-action p-3 active text-white bg-success fw-bold">📋 INCOMING HISTORY</a>
+                <button class="list-group-item list-group-item-action p-3 text-danger fw-bold border-top" onclick="logout()">🚪 LOGOUT</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="dashboard-card">
+            <div class="filter-panel">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="filter-label">From Date</label>
+                        <input type="date" id="fromDate" class="form-control form-control-sm" onchange="filterData()">
+                    </div>
+                    <div class="col-6">
+                        <label class="filter-label">To Date</label>
+                        <input type="date" id="toDate" class="form-control form-control-sm" onchange="filterData()">
+                    </div>
+                    <div class="col-12 mt-2">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                            <input type="text" id="searchInput" class="form-control border-end-0 fw-bold" placeholder="SEARCH..." onkeyup="filterData()">
+                            <button class="btn btn-outline-success border-start-0" type="button" onclick="resetFilters()">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-striped" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>CODE</th>
+                            <th>MODEL</th>
+                            <th>COLOR</th>
+                            <th>SW</th>
+                            <th>QTY</th>
+                            <th>EDIT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incomingDataTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editIncomingModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 20px; border: none;">
+                <div class="modal-header py-2 bg-success text-white">
+                    <h6 class="modal-title fw-bold">EDIT RECORD</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editId">
+                    <div class="mb-2">
+                        <label class="form-label">Incoming Date</label>
+                        <input type="date" id="editDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">Model Name</label><input type="text" id="editModel" class="form-control form-control-sm"></div>
+                        <div class="col-6"><label class="form-label">Item Code</label><input type="text" id="editCode" class="form-control form-control-sm"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label">Color</label><input type="text" id="editColor" class="form-control form-control-sm"></div>
+                        <div class="col-6">
+                            <label class="form-label">Switch</label>
+                            <div class="d-flex gap-2">
+                                <input type="radio" name="edit_sw" value="BLUE" id="edit_blue" class="btn-check">
+                                <label class="btn btn-outline-success btn-sm w-100 fw-bold" for="edit_blue">BLUE</label>
+                                <input type="radio" name="edit_sw" value="RED" id="edit_red" class="btn-check">
+                                <label class="btn btn-outline-success btn-sm w-100 fw-bold" for="edit_red">RED</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-success">Incoming Qty</label>
+                        <input type="number" id="editQty" class="form-control form-control-sm text-center fw-bold fs-5">
+                    </div>
+                    <button class="btn-update" onclick="updateIncomingRecord()">UPDATE NOW</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>© 2026 G.M.S CO.,LTD.</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let allIncomingLogs = [];
+        const editModal = new bootstrap.Modal(document.getElementById('editIncomingModal'));
+
+        function formatDate(d) { if (!d) return "-"; const [y, m, d2] = d.substring(0,10).split('-'); return `${d2}/${m}/${y}`; }
+
+        async function fetchIncomingLogs() {
+            const table = document.getElementById('incomingDataTable');
+            table.innerHTML = `<tr><td colspan="7" class="py-4 text-center"><div class="spinner-border text-success"></div></td></tr>`;
+            const { data, error } = await _supabase.from('incoming_logs').select('*').order('created_at', { ascending: false });
+            if (!error) { allIncomingLogs = data; render(data); }
+        }
+
+        function resetFilters() {
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            document.getElementById('searchInput').value = '';
+            render(allIncomingLogs);
+        }
+
+        function filterData() {
+            const s = document.getElementById('searchInput').value.toUpperCase();
+            const fromD = document.getElementById('fromDate').value;
+            const toD = document.getElementById('toDate').value;
+
+            const filtered = allIncomingLogs.filter(r => {
+                const rDate = r.created_at.substring(0,10);
+                const matchesDate = (!fromD || rDate >= fromD) && (!toD || rDate <= toD);
+                const searchStr = `${formatDate(r.created_at)} ${r.item_code} ${r.model} ${r.color} ${r.switch}`.toUpperCase();
+                return matchesDate && searchStr.includes(s);
+            });
+            render(filtered);
+        }
+
+        function render(data) {
+            document.getElementById('incomingDataTable').innerHTML = data.map(r => `
+                <tr>
+                    <td>${formatDate(r.created_at)}</td>
+                    <td class="text-primary">${r.item_code}</td>
+                    <td>${r.model || '-'}</td>
+                    <td>${r.color || '-'}</td>
+                    <td>${r.switch || '-'}</td>
+                    <td class="text-success">${r.incoming_qty}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success px-2" onclick="openEdit(${r.id})"><i class="bi bi-pencil-square"></i></button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById("historyTable");
+            const ws = XLSX.utils.table_to_sheet(table);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "History");
+            XLSX.writeFile(wb, `GMS_History_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function openEdit(id) {
+            const item = allIncomingLogs.find(x => x.id === id);
+            if (item) {
+                document.getElementById('editId').value = item.id;
+                document.getElementById('editDate').value = item.created_at.substring(0,10);
+                document.getElementById('editCode').value = item.item_code;
+                document.getElementById('editModel').value = item.model || "";
+                document.getElementById('editColor').value = item.color || "";
+                document.getElementById('editQty').value = item.incoming_qty || 0;
+                const sw = item.switch ? item.switch.toUpperCase() : "";
+                if(sw === "BLUE") document.getElementById('edit_blue').checked = true;
+                else if(sw === "RED") document.getElementById('edit_red').checked = true;
+                editModal.show();
+            }
+        }
+
+        async function updateIncomingRecord() {
+            const id = document.getElementById('editId').value;
+            const selSw = document.querySelector('input[name="edit_sw"]:checked');
+            const upData = {
+                created_at: document.getElementById('editDate').value,
+                item_code: document.getElementById('editCode').value.toUpperCase().trim(),
+                model: document.getElementById('editModel').value.toUpperCase().trim(),
+                color: document.getElementById('editColor').value.toUpperCase().trim(),
+                switch: selSw ? selSw.value : "",
+                incoming_qty: parseInt(document.getElementById('editQty').value) || 0
+            };
+            const { error } = await _supabase.from('incoming_logs').update(upData).eq('id', id);
+            if (!error) { editModal.hide(); fetchIncomingLogs(); }
+        }
+
+        function logout() { window.location.href = "index.html"; }
+        fetchIncomingLogs();
+    </script>
+</body>
+</html>

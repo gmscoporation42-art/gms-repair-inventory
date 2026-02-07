@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>G.M.S - KPI Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body, html { height: 100vh; margin: 0; display: flex; flex-direction: column; background-color: #f1f3f5; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        .navbar { background: #ffffff; border-bottom: 1px solid #dee2e6; flex-shrink: 0; }
+        
+        /* Auth Overlay */
+        #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f1f3f5; display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .auth-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 350px; text-align: center; }
+        .password-wrapper { position: relative; }
+        .btn-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: #adb5bd; cursor: pointer; }
+
+        .main-content { flex-grow: 1; padding: 15px; overflow-y: auto; display: none; } 
+        
+        /* Chart Grid Styles */
+        .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+        .chart-container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 260px; }
+        .chart-title { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #666; margin-bottom: 10px; border-left: 4px solid #0d6efd; padding-left: 10px; }
+        
+        /* Technician Cards & Table */
+        .kpi-card { background: white; border-radius: 12px; border: none; margin-bottom: 20px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .tech-header { background: #fff; padding: 15px; border-bottom: 1px solid #eee; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; }
+        .summary-bar { background: #f8f9fa; padding: 12px 15px; display: flex; flex-wrap: wrap; gap: 20px; border-bottom: 1px solid #dee2e6; }
+        .summary-item { font-size: 0.95rem; font-weight: 600; color: #444; }
+        .summary-item b { color: #0d6efd; font-size: 1.1rem; }
+        
+        .table-scroll-container { max-height: 280px; overflow-y: auto !important; }
+        .table { border-collapse: separate !important; border-spacing: 0; width: 100%; } 
+        thead.table-dark th { position: sticky !important; top: 0; z-index: 100; font-size: 0.75rem; text-transform: uppercase; background-color: #212529 !important; color: white !important; padding: 12px 8px; border: 1px solid #444 !important; }
+        .table td { border: 1px solid #f0f0f0 !important; vertical-align: middle; font-size: 0.85rem; padding: 12px 8px; }
+        .pqty-text { color: #0d6efd; font-weight: 800; }
+        
+        footer { background: #ffffff; text-align: center; padding: 8px; font-size: 0.75rem; color: #888; border-top: 1px solid #dee2e6; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="authOverlay">
+        <div class="auth-card">
+            <div class="h5 fw-bold text-primary mb-2">G.M.S CLAIM KPI ACCESS</div>
+            <div class="mt-4 mb-3 password-wrapper">
+                <input type="password" id="kpiPassInput" class="form-control text-center py-2" placeholder="ENTER PASSWORD" onkeypress="if(event.key==='Enter') verifyKPIData()">
+                <button type="button" class="btn-eye" onclick="togglePassword()"><i class="bi bi-eye-slash" id="eyeIcon"></i></button>
+            </div>
+            <button class="btn btn-primary w-100 fw-bold mb-3" onclick="verifyKPIData()">LOG IN</button>
+            <a href="index.html" class="text-decoration-none text-muted" style="font-size: 0.85rem;"><i class="bi bi-arrow-left me-1"></i> Back to Entry Page</a>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <span class="navbar-brand mb-0 h1 text-primary mx-auto fw-bold" style="font-size: 0.95rem;">G.M.S KPI DASHBOARD</span>
+        </div>
+    </nav>
+
+    <div class="offcanvas offcanvas-start" id="mainMenu">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="fw-bold">MENU BAR</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="list-group list-group-flush">
+                <a href="index.html" class="list-group-item list-group-item-action p-3">🏠 SPARE PARTS ENTRY</a>
+                <a href="history.html" class="list-group-item list-group-item-action p-3">📊 HISTORY DASHBOARD</a>
+                <a href="packing.html" class="list-group-item list-group-item-action p-3">📦 PACKING DASHBOARD</a>
+                <a href="kpi.html" class="list-group-item list-group-item-action p-3 active">📈 KPI DASHBOARD</a>
+                <button class="list-group-item list-group-item-action p-3 text-danger fw-bold" onclick="logout()">LOGOUT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="kpiContent" class="main-content">
+        <div class="chart-grid">
+            <div class="chart-container"><div class="chart-title">Repair Activity Count</div><canvas id="modelChart"></canvas></div>
+            <div class="chart-container"><div class="chart-title">Unique Models Mastered</div><canvas id="uniqueModelChart"></canvas></div>
+            <div class="chart-container"><div class="chart-title">PART + PACK TOTALS</div><canvas id="qtyChart"></canvas></div>
+            <div class="chart-container"><div class="chart-title">Total Repair Time (Minutes)</div><canvas id="timeChart"></canvas></div>
+        </div>
+        
+        <div id="techPerformanceArea"></div>
+    </div>
+
+    <footer><div>© 2026 G.M.S CO.,LTD. | BUILT BY RAHUL & GEMINI AI</div></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+        const KPI_PASS = "gmskpi@2026";
+        const techList = ["RAHUL", "RAJ", "MGSOE", "SURESH", "YOD", "CHAI", "AUNG MYINT", "DINESH", "KRISHNA"];
+
+        function togglePassword() {
+            const input = document.getElementById('kpiPassInput');
+            const icon = document.getElementById('eyeIcon');
+            input.type = input.type === "password" ? "text" : "password";
+            icon.classList.toggle('bi-eye'); icon.classList.toggle('bi-eye-slash');
+        }
+
+        function verifyKPIData() {
+            if (document.getElementById('kpiPassInput').value === KPI_PASS) {
+                document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('kpiContent').style.display = 'block';
+                fetchAndRenderKPI();
+            } else alert("Incorrect Password!");
+        }
+
+        function logout() { 
+            localStorage.removeItem('isLoggedIn'); 
+            window.location.href = "index.html"; 
+        }
+
+        // 15-min Logic: If tech entered 0h 0m, we count as 15 mins
+        function getRepairMins(r) {
+            const h = Number(r.repair_hour) || 0, m = Number(r.repair_min) || 0;
+            return (h === 0 && m === 0) ? 15 : (h * 60) + m;
+        }
+
+        async function fetchAndRenderKPI() {
+            if (typeof _supabase === 'undefined') return console.error("Supabase Error");
+            
+            const { data, error } = await _supabase.from('repair_logs').select('*');
+            if (error) return;
+
+            // Start Analysis from 31 Jan 2026
+            const startDate = new Date('2026-01-31T00:00:00');
+
+            const filtered = data.filter(r => {
+                const entryDate = new Date(r.created_at);
+                return r.technician_name && 
+                       techList.includes(r.technician_name.toUpperCase()) &&
+                       entryDate >= startDate;
+            });
+
+            renderTables(filtered); 
+            renderAllCharts(filtered);
+        }
+
+        function renderAllCharts(data) {
+            const stats = techList.reduce((acc, name) => {
+                const records = data.filter(r => r.technician_name?.toUpperCase() === name);
+                acc[name] = {
+                    count: records.length,
+                    unique: new Set(records.map(r => r.model?.toUpperCase())).size,
+                    qty: records.reduce((s, r) => s + (Number(r.qty) || 0) + (Number(r.packing_qty) || 0), 0),
+                    time: records.reduce((s, r) => s + getRepairMins(r), 0)
+                };
+                return acc;
+            }, {});
+
+            const labels = Object.keys(stats);
+            const commonOptions = { maintainAspectRatio: false, plugins: { legend: { display: false } } };
+            const makeChart = (id, key, color) => new Chart(document.getElementById(id), {
+                type: 'bar', data: { labels, datasets: [{ data: labels.map(l => stats[l][key]), backgroundColor: color, borderRadius: 4 }] }, options: commonOptions
+            });
+
+            makeChart('modelChart', 'count', '#0d6efd');
+            makeChart('uniqueModelChart', 'unique', '#6f42c1');
+            makeChart('qtyChart', 'qty', '#198754');
+            makeChart('timeChart', 'time', '#ffc107');
+        }
+
+        function renderTables(allData) {
+            const area = document.getElementById('techPerformanceArea');
+            area.innerHTML = "";
+            techList.forEach(techName => {
+                const techRecords = allData.filter(r => r.technician_name?.toUpperCase() === techName);
+                if(techRecords.length === 0) return;
+
+                const modelGroup = techRecords.reduce((acc, r) => {
+                    const model = r.model || "Unknown";
+                    if (!acc[model]) acc[model] = { model, count: 0, qty: 0, mins: 0 };
+                    acc[model].count++;
+                    acc[model].qty += (Number(r.qty) || 0) + (Number(r.packing_qty) || 0);
+                    acc[model].mins += getRepairMins(r);
+                    return acc;
+                }, {});
+
+                const items = Object.values(modelGroup), totalMins = items.reduce((s, v) => s + v.mins, 0), totalQty = items.reduce((s, v) => s + v.qty, 0);
+                const card = document.createElement('div');
+                card.className = "kpi-card";
+                card.innerHTML = `
+                    <div class="tech-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-person-fill text-primary me-2"></i>${techName}</span>
+                        <span class="badge rounded-pill bg-primary text-white" style="font-size:0.8rem;">${items.length} MODELS</span>
+                    </div>
+                    <div class="summary-bar">
+                        <div class="summary-item">ACTIVITY: <b>${techRecords.length}</b></div>
+                        <div class="summary-item">PART+PACK: <b>${totalQty}</b></div>
+                        <div class="summary-item">TOTAL TIME: <b>${Math.floor(totalMins/60)}h ${totalMins%60}m</b></div>
+                    </div>
+                    <div class="table-scroll-container">
+                        <table class="table table-sm text-center align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-start ps-3" style="width:40%">MODEL NAME</th>
+                                    <th>ACTIVITY</th>
+                                    <th>P+P QTY</th>
+                                    <th class="text-end pe-3">TIME</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map(r => `<tr>
+                                    <td class="text-start ps-3 fw-bold text-dark">${r.model}</td>
+                                    <td class="text-primary fw-bold" style="font-size: 0.85rem;">${r.count}</td>
+                                    <td class="text-primary fw-bold" style="font-size: 0.85rem;">${r.qty}</td>
+                                    <td class="text-end pe-3 text-muted" style="font-size: 0.85rem;">${Math.floor(r.mins/60)}h ${r.mins%60}m</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+                area.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

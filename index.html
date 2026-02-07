@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>G.M.S Reparing Stock Entry</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* တစ်မျက်နှာလုံးစာ Scroll မပါအောင် ပိတ်ထားတာပါ */
+        body,
+        html {
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            background-color: #f4f7f6;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            /* Scroll ပိတ်ခြင်း */
+        }
+
+        .navbar {
+            background: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            flex-shrink: 0;
+        }
+
+        /* Form ကို နေရာအလွတ်ထဲမှာ အံဝင်ခွင်ကျဖြစ်အောင် ညှိခြင်း */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .card-pro {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 380px;
+            /* အကျယ်ကို နည်းနည်းလျှော့လိုက်တယ် */
+        }
+
+        /* Form elements ကြားက နေရာလွတ်တွေကို လျှော့ချခြင်း */
+        .form-label {
+            font-weight: 700;
+            font-size: 0.7rem;
+            color: #444;
+            margin-bottom: 1px;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            border-radius: 6px;
+            padding: 6px 10px;
+            border: 1px solid #d1d9e0;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            -moz-appearance: textfield;
+            appearance: none;
+        }
+        /* Chrome, Safari, Edge တို့တွင် Spin Buttons များကို သီးသန့် ထပ်ဖျောက်ခြင်း */
+        .form-control::-webkit-outer-spin-button,
+        .form-control::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .btn-submit {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            width: 100%;
+            transition: 0.3s;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            flex-shrink: 0;
+            background: #ffffff;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.7rem;
+            color: #888;
+            border-top: 1px solid #dee2e6;
+        }
+
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loginOverlay">
+        <div class="card-pro text-center" style="width: 300px;">
+            <h6 class="mb-3 fw-bold">🔐 G.M.S CORPORATION</h6>
+            <input type="password" id="passInput" class="form-control text-center" placeholder="PASSWORD">
+            <button class="btn btn-primary btn-submit" onclick="checkLogin()">LOGIN</button>
+            <p id="loginError" class="text-danger mt-2" style="display:none; font-size: 11px;">Invalid Password</p>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <span class="navbar-brand mb-0 h1 text-primary mx-auto fw-bold" style="font-size: 0.9rem;">G.M.S STOCK
+                SYSTEM</span>
+        </div>
+    </nav>
+
+    <div class="offcanvas offcanvas-start" id="mainMenu">
+        <div class="offcanvas-header border-bottom">
+            <h6 class="fw-bold m-0">MENU BAR</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="list-group list-group-flush">
+                <a href="index.html" class="list-group-item list-group-item-action p-3 active">🏠 SPARE PARTS ENTRY</a>
+                <a href="history.html" class="list-group-item list-group-item-action p-3">📊 HISTORY DASHBOARD</a>
+                <a href="packing.html" class="list-group-item list-group-item-action p-3">📦 PACKING DASHBOARD</a>
+                <a href="kpi.html" class="list-group-item list-group-item-action p-3">📈 KPI DASHBOARD</a>
+                <a href="incoming.html" class="list-group-item list-group-item-action p-3">📥 STOCK INCOMING</a>
+                <button class="list-group-item list-group-item-action p-3 text-danger fw-bold"
+                    onclick="logout()">LOGOUT</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="card-pro">
+            <h6 class="text-center mb-3 fw-bold text-dark border-bottom pb-1" style="font-size: 0.85rem;">REPAIR ENTRY
+                FORM</h6>
+            <form id="repairForm">
+                <label class="form-label">Entry Date</label>
+                <input type="date" id="entry_date" class="form-control" required>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">Technician</label>
+                        <input type="text" id="tech_name" placeholder="NAME" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Item Code</label>
+                        <input type="text" id="item_code" placeholder="CODE" class="form-control" required>
+                    </div>
+                </div>
+
+                <label class="form-label">Model</label>
+                <input type="text" id="model" placeholder="MODEL NAME" class="form-control" required>
+
+                <div class="row g-2">
+                    <div class="col-8">
+                        <label class="form-label">Replaced Part</label>
+                        <input type="text" id="part" class="form-control" placeholder="PART NAME">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Qty</label>
+                        <input type="number" id="qty" class="form-control" min="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-8">
+                        <label class="form-label">Packing Type</label>
+                        <input type="text" id="packing" class="form-control" value="PACKING" readonly>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">P.Qty</label>
+                        <input type="number" id="p_qty" class="form-control" min="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">Repair Hour</label>
+                        <input type="number" id="repair_hour" class="form-control" placeholder="HOUR" min="0" >
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Repair Min</label>
+                        <input type="number" id="repair_min" class="form-control" placeholder="MINUTE" min="0" max="59" >
+                    </div>
+                </div>
+
+                <label class="form-label">Note</label>
+                <input type="text" id="note" class="form-control" placeholder="OPTIONAL">
+
+                <button type="submit" id="submitBtn" class="btn-submit">SAVE RECORD</button>
+            </form>
+            <div id="status" class="mt-1 text-center fw-bold" style="font-size: 0.75rem; min-height: 18px;"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div>© 2026 G.M.S CO.,LTD. | BUILT BY RAHUL & GEMINI AI</div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        window.onload = () => {
+            document.getElementById('entry_date').value = new Date().toISOString().split('T')[0];
+            if (localStorage.getItem('isLoggedIn') === 'true') document.getElementById('loginOverlay').style.display = 'none';
+        };
+        function checkLogin() {
+            if (document.getElementById('passInput').value === "GMS12092022") {
+                localStorage.setItem('isLoggedIn', 'true');
+                document.getElementById('loginOverlay').style.display = 'none';
+            } else {document.getElementById('loginError').style.display = 'block';}
+        }
+        function logout() {localStorage.removeItem('isLoggedIn'); window.location.reload();}
+
+        /*document.getElementById('repairForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('status');
+            const submitBtn = document.getElementById('submitBtn');
+            statusDiv.innerText = "";
+            statusDiv.className = "mt-1 text-center fw-bold";
+            submitBtn.disabled = true;
+            submitBtn.innerText = "SAVING...";
+
+            const rowData = {
+                technician_name: document.getElementById('tech_name').value.toUpperCase().trim(),
+                item_code: document.getElementById('item_code').value.toUpperCase().trim(),
+                model: document.getElementById('model').value.toUpperCase().trim(),
+                part: document.getElementById('part').value.toUpperCase().trim(),
+                qty: parseInt(document.getElementById('qty').value) || 0,
+                packing: "PACKING",
+                packing_qty: parseInt(document.getElementById('p_qty').value) || 0,
+                repair_hour: parseInt(document.getElementById('repair_hour').value) || 0,
+                repair_min: parseInt(document.getElementById('repair_min').value) || 0,
+                note: document.getElementById('note').value.toUpperCase().trim(),
+                created_at: document.getElementById('entry_date').value
+            };
+
+            try {
+                const {error} = await _supabase.from('repair_logs').insert([rowData]);
+                if (error) throw error;
+                statusDiv.className = "mt-1 text-center fw-bold text-success";
+                statusDiv.innerText = "SAVED SUCCESSFULLY! ✅";
+                const curDate = document.getElementById('entry_date').value;
+                document.getElementById('repairForm').reset();
+                document.getElementById('entry_date').value = curDate;
+                document.getElementById('packing').value = "PACKING";
+                setTimeout(() => statusDiv.innerText = "", 2000);
+            } catch (err) {
+                statusDiv.className = "mt-1 text-center fw-bold text-danger";
+                statusDiv.innerText = "ERROR!";
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "SAVE RECORD";
+            }
+        });*/
+    </script>
+</body>
+
+</html>
