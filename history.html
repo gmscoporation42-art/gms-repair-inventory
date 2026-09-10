@@ -32,12 +32,13 @@
         .qty-text { color: #198754; font-weight: 800; font-size: 0.95rem; }
         .pqty-text { color: #0d6efd; font-weight: 800; font-size: 0.95rem; }
         .time-text { color: #666; font-weight: 600; font-size: 0.75rem; background: #f8f9fa; padding: 2px 5px; border-radius: 4px; }
+        .status-text { font-weight: 800; color: #333; font-size: 0.8rem; }
+        .cla-text { font-weight: 900; color: #000; }
 
         .pack-text-only { 
             color: #495057; 
-            font-weight: 900; 
+            font-weight: 400; 
             font-size: 0.85rem; 
-            letter-spacing: 0.5px;
         }
 
         .table-hover tbody tr:hover { background-color: #f8f9fa; transition: 0.2s; }
@@ -95,6 +96,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>DATE</th>
+                            <th>CLA NO.</th>
                             <th>CODE</th>
                             <th>TECHNICIAN</th>
                             <th>MODEL</th>
@@ -102,6 +104,7 @@
                             <th>QTY</th>
                             <th>PACKING</th>
                             <th>P.QTY</th>
+                            <th>STATUS TYPE</th>
                             <th>NOTE</th>
                             <th>TIME</th>
                             <th class="no-export">EDIT</th>
@@ -122,7 +125,10 @@
                 </div>
                 <div class="modal-body p-4">
                     <input type="hidden" id="editId">
-                    <div class="mb-3"><label class="form-label">Entry Date</label><input type="date" id="editDate" class="form-control form-control-sm"></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><label class="form-label">Entry Date</label><input type="date" id="editDate" class="form-control form-control-sm"></div>
+                        <div class="col-6"><label class="form-label">CLA No.</label><input type="text" id="editCla" class="form-control form-control-sm"></div>
+                    </div>
                     <div class="row g-3 mb-3">
                         <div class="col-6"><label class="form-label">Technician</label><input type="text" id="editTech" class="form-control form-control-sm"></div>
                         <div class="col-6"><label class="form-label">Item Code</label><input type="text" id="editCode" class="form-control form-control-sm"></div>
@@ -135,6 +141,16 @@
                     <div class="row g-3 mb-3">
                         <div class="col-8"><label class="form-label">Packing Type</label><input type="text" class="form-control form-control-sm" value="PACKING" readonly disabled></div>
                         <div class="col-4"><label class="form-label">P.Qty</label><input type="number" id="editPQty" class="form-control form-control-sm"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status Type</label>
+                        <select id="editStatusType" class="form-control form-control-sm">
+                            <option value="">-- SELECT STATUS --</option>
+                            <option value="ADD STOCK">ADD STOCK</option>
+                            <option value="PACKING DAMAGE">PACKING DAMAGE</option>
+                            <option value="GOODS DAMAGE">GOODS DAMAGE</option>
+                            <option value="CN">CN</option>
+                        </select>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-6"><label class="form-label">Repair Hour</label><input type="number" id="editHour" class="form-control form-control-sm"></div>
@@ -168,14 +184,14 @@
 
         function updateTodaySummary() {
             const todayStr = new Date().toISOString().split('T')[0]; 
-            const todayData = allLogs.filter(r => r.created_at.startsWith(todayStr));
+            const todayData = allLogs.filter(r => r.created_at && r.created_at.startsWith(todayStr));
             document.getElementById('todayPartTotal').innerText = todayData.reduce((s, r) => s + (parseInt(r.qty) || 0), 0);
             document.getElementById('todayPackTotal').innerText = todayData.reduce((s, r) => s + (parseInt(r.packing_qty) || 0), 0);
         }
 
         function filterData() {
             const s = document.getElementById('searchInput').value.toUpperCase();
-            const filtered = allLogs.filter(r => (r.item_code||'').toUpperCase().includes(s) || (r.technician_name||'').toUpperCase().includes(s) || (r.model||'').toUpperCase().includes(s) || (r.part||'').toUpperCase().includes(s) || (r.note||'').toUpperCase().includes(s));
+            const filtered = allLogs.filter(r => (r.item_code||'').toUpperCase().includes(s) || (r.technician_name||'').toUpperCase().includes(s) || (r.model||'').toUpperCase().includes(s) || (r.part||'').toUpperCase().includes(s) || (r.note||'').toUpperCase().includes(s) || (r.cla_no||'').toUpperCase().includes(s) || (r.status_type||'').toUpperCase().includes(s));
             render(filtered);
         }
 
@@ -185,12 +201,12 @@
             document.getElementById('dataTable').innerHTML = data.map(r => {
                 const hour = r.repair_hour || 0;
                 const min = r.repair_min || 0;
-                // အကယ်၍ နှစ်ခုလုံး ၀ ဖြစ်နေရင် KPI အရ ၁၅ မိနစ်အဖြစ် ပြသည် (Optionally)
                 const timeDisplay = (hour === 0 && min === 0) ? "15m" : `${hour}h ${min}m`;
 
                 return `
                 <tr style="font-size: 0.78rem;">
                     <td class="fw-bold text-muted">${formatDateToDisplay(r.created_at)}</td>
+                    <td><span class="cla-text">${r.cla_no || '-'}</span></td>
                     <td class="fw-bold text-primary">${r.item_code || '-'}</td>
                     <td>${r.technician_name || '-'}</td>
                     <td>${r.model || '-'}</td>
@@ -198,6 +214,7 @@
                     <td><span class="qty-text">${r.qty > 0 ? r.qty : ""}</span></td>
                     <td><span class="pack-text-only">${r.packing_qty > 0 ? 'PACKING' : ""}</span></td>
                     <td><span class="pqty-text">${r.packing_qty > 0 ? r.packing_qty : ""}</span></td>
+                    <td><span class="status-text">${r.status_type ? r.status_type : ""}</span></td>
                     <td class="small text-muted">${r.note || '-'}</td>
                     <td><span class="time-text">${timeDisplay}</span></td>
                     <td class="no-export">
@@ -211,13 +228,15 @@
             const item = allLogs.find(x => x.id === id);
             if (item) { 
                 document.getElementById('editId').value = item.id; 
-                document.getElementById('editDate').value = item.created_at.substring(0,10); 
+                document.getElementById('editDate').value = item.created_at ? item.created_at.substring(0,10) : ""; 
+                document.getElementById('editCla').value = item.cla_no || "";
                 document.getElementById('editTech').value = item.technician_name || "";
                 document.getElementById('editCode').value = item.item_code || "";
                 document.getElementById('editModel').value = item.model || "";
                 document.getElementById('editPart').value = item.part || "";
                 document.getElementById('editQty').value = item.qty || 0; 
                 document.getElementById('editPQty').value = item.packing_qty || 0; 
+                document.getElementById('editStatusType').value = item.status_type || "";
                 document.getElementById('editHour').value = item.repair_hour || 0; 
                 document.getElementById('editMin').value = item.repair_min || 0; 
                 document.getElementById('editNote').value = item.note || ""; 
@@ -229,12 +248,14 @@
             const id = document.getElementById('editId').value;
             const upData = { 
                 created_at: document.getElementById('editDate').value,
+                cla_no: document.getElementById('editCla').value.toUpperCase().trim(),
                 technician_name: document.getElementById('editTech').value.toUpperCase().trim(),
                 item_code: document.getElementById('editCode').value.toUpperCase().trim(),
                 model: document.getElementById('editModel').value.toUpperCase().trim(),
                 part: document.getElementById('editPart').value.toUpperCase().trim(),
                 qty: parseInt(document.getElementById('editQty').value) || 0, 
                 packing_qty: parseInt(document.getElementById('editPQty').value) || 0, 
+                status_type: document.getElementById('editStatusType').value,
                 repair_hour: parseInt(document.getElementById('editHour').value) || 0, 
                 repair_min: parseInt(document.getElementById('editMin').value) || 0, 
                 note: document.getElementById('editNote').value.toUpperCase().trim() 
