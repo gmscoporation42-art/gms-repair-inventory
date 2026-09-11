@@ -10,10 +10,10 @@ function addPartRow() {
     newRow.className = "row g-2 align-items-center part-row mb-1";
     newRow.innerHTML = `
         <div class="col-7">
-            <input type="text" name="part[]" class="form-control mb-0" placeholder="PART NAME" required>
+            <input type="text" name="part[]" class="form-control mb-0" placeholder="PART NAME">
         </div>
         <div class="col-3">
-            <input type="number" name="qty[]" class="form-control mb-0" min="0" placeholder="0" required>
+            <input type="number" name="qty[]" class="form-control mb-0" min="0" placeholder="0">
         </div>
         <div class="col-2 text-center">
             <button type="button" class="btn btn-outline-danger btn-circle" onclick="removePartRow(this)" title="Remove">×</button>
