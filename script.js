@@ -97,11 +97,11 @@ if (document.getElementById('repairForm')) {
                 <div class="row g-2 align-items-center part-row mb-1">
                     <div class="col-7">
                         <label class="form-label">Replaced Part</label>
-                        <input type="text" name="part[]" class="form-control mb-0" placeholder="PART NAME" required>
+                        <input type="text" name="part[]" class="form-control mb-0" placeholder="PART NAME">
                     </div>
                     <div class="col-3">
                         <label class="form-label">Qty</label>
-                        <input type="number" name="qty[]" class="form-control mb-0" min="0" placeholder="0" required>
+                        <input type="number" name="qty[]" class="form-control mb-0" min="0" placeholder="0">
                     </div>
                     <div class="col-2 text-center">
                         <label class="form-label">&nbsp;</label>
